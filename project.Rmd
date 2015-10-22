@@ -1,14 +1,19 @@
 ---
 title: "Practical Machine Learning - Identifying Correct Lifting Form from Accelerometer Data"
 output: html_document
+author: Keith S Messina
+date: October 21, 2015
 ---
+
 ## Objective
 In this analysis, we attempt to provide a model that predicts proper lifting form via a statistical analysis of accelerometer data. Accelerometer data was collected from six different subjects that were instructed to perform certain activities first using correct form and then using incorrect form, in five different ways. The accelerometers were attached to the participant's belt, forearm, arm, and dumbell during the performance of each exercise and the data collected separately for both sets was labeled based on the manner in which the activities were performed.
+
 ## Summary
-I performed a simple clean-up of the accelerometer data to remove a few irrelevant timestamp columns before the analysis was run. I chose a random forest model and completed no preprocessing fo the data. After tweaking some of the parameters of the random forest function to get the analysis to run correctly, I wound up with a model that had an out-of-sample accuracy of 99.6%. This is the model that I used to predict the values in the test set and submited to the Practical Machine Learning class.
+I performed a simple clean-up of the accelerometer data to remove a few irrelevant timestamp columns before the analysis was run. I chose a random forest model and completed no preprocessing of the data. After tweaking some of the parameters of the random forest function to get the analysis to run correctly, I wound up with a model that had an out-of-sample accuracy of 99.6%. This is the model that I used to predict the values in the test set and submitted to the Practical Machine Learning class.
+
 ## Setting up the Environment
 The packages below need to be loaded to perform the analysis.
-```{r echo = TRUE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 # Load packages and set seed.
 library(caret)
 library(ROCR)
@@ -16,62 +21,68 @@ library(car)
 library(gclus)
 ```
 For reproducibility, the seed is set as well:
-```{r echo = TRUE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 set.seed(7835444)
 ```
+
 ## Data Processing
 ### Data Loading
 On first load of the data, I noticed that the file included three different representations of NA values: blank spaces, the letters "NA", and apparent excel errors of trying to divide by zero represented by "#DIV/0!". The first step in saving a tidy dataset was to use these as NA strings when loading the data.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 testing <- read.csv("pml-testing.csv", na.strings=c("", "NA", "#DIV/0!"))
 training <- read.csv("pml-training.csv", na.strings=c("", "NA", "#DIV/0!"))
 ```
 The data has `r nrow(training)` observations of `r length(training)` variables in the training set and has `r nrow(testing)` observations of `r length(testing)` variables in the testing set. It should be noted that the variable which we want to predict is in the `classe` column when the data is loaded. The `training` set has this variable, which is used to train the model, while the `testing` set does not have this variable. In this case, the `testing` set is used to create a submission for the Coursera class with which this project is associated. The submission is graded to assess the performance of the analysis, hence it is missing from the data. We will create a testing set later on from a subset of the `training` set, which will contain the `classe` variable and will be used to cross-validate our prediction model.
+
 ### Characterizing the Data
-The next step I took, was to characterize the data to see if there is any processing that would need to be done to make the data tidy, to uderstand the type of analysis I wanted to perform, and determine the parameters of that analysis.
-The simplest chracterization is just showing how much of the  data is complete:
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+The next step I took, was to characterize the data to see if there is any processing that would need to be done to make the data tidy, to understand the type of analysis I wanted to perform, and determine the parameters of that analysis.
+The simplest characterization is just showing how much of the data is complete:
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 print(sum(complete.cases(training)))
 ```
 I then took the step to identifying how many of the variables were highly correlated. Here, I've arbitrarily set a correlation threshold of .8 to represent highly correlated data.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 correlations <- abs(cor(training[,-c(1:7,length(training))]))
 diag(correlations) <- 0
 correlateHigh <- which(correlations > .8, arr.ind=TRUE)
 print(length(correlateHigh))
 ```
+
 ### Creating a Tidy Dataset
 Next, I wanted to tidy up the data a bit more by removing the flagged missing values that were loaded in above. I first removed the missing data, so that I didn't start introducing errors into the data before i developed a baseline. If I wasn't able to get a good model from the complete data, then I could start imputing values and adding the variables with missing data back in to improve the regression.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 missingColumns <- as.data.frame(lapply(training, function(x){sum(is.na(x))}))
 missingColumns <- which(missingColumns > 0)
 trainingComplete <- training[, -c(missingColumns)]
 ```
 In addition, I removed the timestamp column from the data. In this particular dataset, the time in which someone performed the exercises isn't a variable that I would consider relevant to the target variable.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 trainingTidy <- trainingComplete[,-c(1, 3:7)]
 ```
+
 ### Creating Training and Cross-Validation Datasets
 The final step in creating the dataset for the analysis is to pull out a validation test set to perform cross-validation on in order to estimate an out-of-sample accuracy rate. This will give us an idea of how the model will perform on data that wasn't used to create the model, helping to avoid overfitting of the data.
 To create the cross-validation set, I employed the `createDataPartition` method in the `caret` library. I used a 70/30 mix of training data to test data.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 partition <- createDataPartition(y=trainingTidy$classe, p=.7, list=FALSE)
 trainingTrainTidy <- trainingTidy[partition, ]
 trainingTestTidy <- trainingTidy[-partition, ]
 ```
+
 ## Analysis
-The dataset under analysis has a large umber of variables, so I decided to use a random forest model to build classification trees. To determine if I would like to perform some pre-processing of the data, I calculated how skewed the data was via an aalysis of the standard deviation versus the average in each of the columns. I again set an arbitrary size for skewness that I could later adjust to test the effects on the outcome of the analysis if the model performed poorly.
+The dataset under analysis has a large number of variables, so I decided to use a random forest model to build classification trees. To determine if I would like to perform some pre-processing of the data, I calculated how skewed the data was via an analysis of the standard deviation versus the average in each of the columns. I again set an arbitrary size for skewness that I could later adjust to test the effects on the outcome of the analysis if the model performed poorly.
 The code below calculates the standard deviation of each column and divides it by the mean of the column. This gives us a ratio that can be used to determine which columns may give the classification algorithm problems.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 skewness <- as.vector(lapply(trainingTidy[, -c(1, length(trainingTidy))], function(x) abs(sd(x, na.rm=TRUE)/mean(x, na.rm=TRUE))))
 skewedColumns <- skewness[skewness>5]
 print(sum(length(skewedColumns)))
 ```
 From the above calculation, you can see that we have `r print(sum(length(skewedColumns)))` columns that meet the criteria of being skewed. This classification is based on a standard deviation-to-mean ratio of `5`. After I perform the baseline analysis, I will run an analysis
 using pre-processing to see if I can gain some accuracy in adjusting the model for this skewness.
+
 ### Training the data
 The analysis of the data is shown below. I tried a few different variations with differing parameters, but chose this as a baseline that ran in a reasonable amount of time.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 trained <- train(classe ~ ., data=trainingTrainTidy,
                  trControl = trainControl(method = 'none',
                                           returnResamp = 'none',
@@ -84,18 +95,19 @@ trained <- train(classe ~ ., data=trainingTrainTidy,
 ```
 Using this trained model, we can then run the training data to find an in-sample accuracy rate. This accuracy rate will be overly optimistic due to some overfitting. The real value in this accuracy rate is when we compare it to the out-of-sample accuracy rate to see just how much we are overfitting the data.
 First we predict the values of the `classe` variable that is given in the training data and show the confusion matrix for the prediction.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 predictTrain <- predict(trained, newdata=trainingTrainTidy)
 inSampleErrorMatrix <- confusionMatrix(predictTrain, trainingTrainTidy$classe)
 inSampleError <- as.numeric(inSampleErrorMatrix$overall[1])
 ```
 Even with the optimistic error calculation, the in-sample accuracy rate is high.
 Next we predict the values of the `classe` variable in the `testing` subset of the `training` data set. This prediction will be used to determine an estimate for the out-of-sample accuracy, since the observations were not used in creating the model. This calculation acts as a cross-validator for the data, giving us a better sense of how realistically we can predict new data.
-```{r echo=TRUE, message = FALSE, warnings = FALSE}
+```{r echo=TRUE, message = FALSE, warning = FALSE}
 predictTest <- predict(trained, newdata=trainingTestTidy)
 outSampleErrorMatrix <- confusionMatrix(predictTest, trainingTestTidy$classe)
 outSampleError <- as.numeric(outSampleErrorMatrix$overall[1])
 ```
 The out-of-sample accuracy is also very high in this case (`r outSampleError`), even without data processing.
+
 #Conclusion
 Due to the very small difference between the in-sample accuracy and the out-of-sample accuracy calculated with the two training subsets, it appears that we do not have to do any more processing for this analysis. We can use the model we created as-is to predict the values for the Coursera class submission.

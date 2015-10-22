@@ -74,30 +74,16 @@ img {
 </div>
 <div id="summary" class="section level2">
 <h2>Summary</h2>
-<p>I performed a simple clean-up of the accelerometer data to remove a few irrelevant timestamp columns before the analysis was run. I chose a random forest model and completed no preprocessing fo the data. After tweaking some of the parameters of the random forest function to get the analysis to run correctly, I wound up with a model that had an out-of-sample accuracy of 99.6%. This is the model that I used to predict the values in the test set and submited to the Practical Machine Learning class.</p>
+<p>I performed a simple clean-up of the accelerometer data to remove a few irrelevant timestamp columns before the analysis was run. I chose a random forest model and completed no preprocessing of the data. After tweaking some of the parameters of the random forest function to get the analysis to run correctly, I wound up with a model that had an out-of-sample accuracy of 99.6%. This is the model that I used to predict the values in the test set and submitted to the Practical Machine Learning class.</p>
 </div>
 <div id="setting-up-the-environment" class="section level2">
 <h2>Setting up the Environment</h2>
 <p>The packages below need to be loaded to perform the analysis.</p>
 <pre class="r"><code># Load packages and set seed.
-library(caret)</code></pre>
-<pre><code>## Warning: package 'caret' was built under R version 3.2.2</code></pre>
-<pre><code>## Loading required package: lattice
-## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(ROCR)</code></pre>
-<pre><code>## Warning: package 'ROCR' was built under R version 3.2.2</code></pre>
-<pre><code>## Loading required package: gplots
-## 
-## Attaching package: 'gplots'
-## 
-## The following object is masked from 'package:stats':
-## 
-##     lowess</code></pre>
-<pre class="r"><code>library(car)</code></pre>
-<pre><code>## Warning: package 'car' was built under R version 3.2.2</code></pre>
-<pre class="r"><code>library(gclus)</code></pre>
-<pre><code>## Warning: package 'gclus' was built under R version 3.2.2</code></pre>
-<pre><code>## Loading required package: cluster</code></pre>
+library(caret)
+library(ROCR)
+library(car)
+library(gclus)</code></pre>
 <p>For reproducibility, the seed is set as well:</p>
 <pre class="r"><code>set.seed(7835444)</code></pre>
 </div>
@@ -112,7 +98,7 @@ training &lt;- read.csv(&quot;pml-training.csv&quot;, na.strings=c(&quot;&quot;,
 </div>
 <div id="characterizing-the-data" class="section level3">
 <h3>Characterizing the Data</h3>
-<p>The next step I took, was to characterize the data to see if there is any processing that would need to be done to make the data tidy, to uderstand the type of analysis I wanted to perform, and determine the parameters of that analysis. The simplest chracterization is just showing how much of the data is complete:</p>
+<p>The next step I took, was to characterize the data to see if there is any processing that would need to be done to make the data tidy, to understand the type of analysis I wanted to perform, and determine the parameters of that analysis. The simplest characterization is just showing how much of the data is complete:</p>
 <pre class="r"><code>print(sum(complete.cases(training)))</code></pre>
 <pre><code>## [1] 0</code></pre>
 <p>I then took the step to identifying how many of the variables were highly correlated. Here, I’ve arbitrarily set a correlation threshold of .8 to represent highly correlated data.</p>
@@ -141,7 +127,7 @@ trainingTestTidy &lt;- trainingTidy[-partition, ]</code></pre>
 </div>
 <div id="analysis" class="section level2">
 <h2>Analysis</h2>
-<p>The dataset under analysis has a large umber of variables, so I decided to use a random forest model to build classification trees. To determine if I would like to perform some pre-processing of the data, I calculated how skewed the data was via an aalysis of the standard deviation versus the average in each of the columns. I again set an arbitrary size for skewness that I could later adjust to test the effects on the outcome of the analysis if the model performed poorly. The code below calculates the standard deviation of each column and divides it by the mean of the column. This gives us a ratio that can be used to determine which columns may give the classification algorithm problems.</p>
+<p>The dataset under analysis has a large number of variables, so I decided to use a random forest model to build classification trees. To determine if I would like to perform some pre-processing of the data, I calculated how skewed the data was via an analysis of the standard deviation versus the average in each of the columns. I again set an arbitrary size for skewness that I could later adjust to test the effects on the outcome of the analysis if the model performed poorly. The code below calculates the standard deviation of each column and divides it by the mean of the column. This gives us a ratio that can be used to determine which columns may give the classification algorithm problems.</p>
 <pre class="r"><code>skewness &lt;- as.vector(lapply(trainingTidy[, -c(1, length(trainingTidy))], function(x) abs(sd(x, na.rm=TRUE)/mean(x, na.rm=TRUE))))
 skewedColumns &lt;- skewness[skewness&gt;5]
 print(sum(length(skewedColumns)))</code></pre>
@@ -159,7 +145,6 @@ print(sum(length(skewedColumns)))</code></pre>
                                           ),
                tuneGrid = expand.grid(mtry=c(6)),
                method=&quot;rf&quot;)</code></pre>
-<pre><code>## Warning: package 'randomForest' was built under R version 3.2.2</code></pre>
 <p>Using this trained model, we can then run the training data to find an in-sample accuracy rate. This accuracy rate will be overly optimistic due to some overfitting. The real value in this accuracy rate is when we compare it to the out-of-sample accuracy rate to see just how much we are overfitting the data. First we predict the values of the <code>classe</code> variable that is given in the training data and show the confusion matrix for the prediction.</p>
 <pre class="r"><code>predictTrain &lt;- predict(trained, newdata=trainingTrainTidy)
 inSampleErrorMatrix &lt;- confusionMatrix(predictTrain, trainingTrainTidy$classe)
