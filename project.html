@@ -71,6 +71,9 @@ img {
 <div id="objective" class="section level2">
 <h2>Objective</h2>
 <p>In this analysis, we attempt to provide a model that predicts proper lifting form via a statistical analysis of accelerometer data. Accelerometer data was collected from six different subjects that were instructed to perform certain activities first using correct form and then using incorrect form, in five different ways. The accelerometers were attached to the participant’s belt, forearm, arm, and dumbell during the performance of each exercise and the data collected separately for both sets was labeled based on the manner in which the activities were performed.</p>
+<p>Data used in this analysis was taken from:</p>
+<p>Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers’ Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science., pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6.</p>
+<p>Read more: <a href="http://groupware.les.inf.puc-rio.br/har#ixzz3pLqqNFwK" class="uri">http://groupware.les.inf.puc-rio.br/har#ixzz3pLqqNFwK</a></p>
 </div>
 <div id="summary" class="section level2">
 <h2>Summary</h2>
@@ -153,7 +156,7 @@ inSampleError &lt;- as.numeric(inSampleErrorMatrix$overall[1])</code></pre>
 <pre class="r"><code>predictTest &lt;- predict(trained, newdata=trainingTestTidy)
 outSampleErrorMatrix &lt;- confusionMatrix(predictTest, trainingTestTidy$classe)
 outSampleError &lt;- as.numeric(outSampleErrorMatrix$overall[1])</code></pre>
-<p>The out-of-sample accuracy is also very high in this case (0.995582), even without data processing.</p>
+<p>The out-of-sample accuracy is also very high in this case (0.9957519), even without data processing.</p>
 </div>
 </div>
 <div id="conclusion" class="section level1">

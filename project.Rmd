@@ -1,12 +1,18 @@
 ---
-title: "Practical Machine Learning - Identifying Correct Lifting Form from Accelerometer Data"
-output: html_document
-author: Keith S Messina
-date: October 21, 2015
+title: Practical Machine Learning - Identifying Correct Lifting Form from Accelerometer
+  Data
+author: "Keith S Messina"
+date: "October 21, 2015"
 ---
 
 ## Objective
 In this analysis, we attempt to provide a model that predicts proper lifting form via a statistical analysis of accelerometer data. Accelerometer data was collected from six different subjects that were instructed to perform certain activities first using correct form and then using incorrect form, in five different ways. The accelerometers were attached to the participant's belt, forearm, arm, and dumbell during the performance of each exercise and the data collected separately for both sets was labeled based on the manner in which the activities were performed.
+
+Data used in this analysis was taken from:
+
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science., pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
+
+Read more: http://groupware.les.inf.puc-rio.br/har#ixzz3pLqqNFwK
 
 ## Summary
 I performed a simple clean-up of the accelerometer data to remove a few irrelevant timestamp columns before the analysis was run. I chose a random forest model and completed no preprocessing of the data. After tweaking some of the parameters of the random forest function to get the analysis to run correctly, I wound up with a model that had an out-of-sample accuracy of 99.6%. This is the model that I used to predict the values in the test set and submitted to the Practical Machine Learning class.
